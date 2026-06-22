@@ -1,5 +1,98 @@
-<html>
-    <body>蓝天白云
-        <img scr="https://xutt23.github.io/code/newweb/1.jpg"><img>
-    </body>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>简易聊天室</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;font-family:微软雅黑}
+        body{max-width:900px;margin:20px auto;padding:0 15px}
+        #chatBox{
+            width:100%;
+            height:500px;
+            border:1px solid #ccc;
+            padding:10px;
+            overflow-y:auto;
+            margin-bottom:15px;
+            background:#f9f9f9;
+        }
+        .msg{margin:6px 0;line-height:1.6}
+        .self{color:#0066cc;text-align:right}
+        .other{color:#333;text-align:left}
+        .time{font-size:12px;color:#999;margin-left:8px}
+        #name{width:120px;padding:8px;border:1px solid #ddd}
+        #inputMsg{flex:1;padding:8px;border:1px solid #ddd;margin:0 8px}
+        .sendArea{display:flex;align-items:center}
+        button{padding:8px 16px;background:#007bff;color:white;border:none;cursor:pointer;border-radius:4px}
+        #exportBtn{background:#28a745;margin-top:10px}
+    </style>
+</head>
+<body>
+    <h2>在线聊天室</h2>
+    <div id="chatBox"></div>
+    <div class="sendArea">
+        <input type="text" id="name" placeholder="输入昵称" value="游客">
+        <input type="text" id="inputMsg" placeholder="输入聊天内容，回车发送">
+        <button onclick="sendMsg()">发送</button>
+    </div>
+    <button id="exportBtn" onclick="exportTxt()">导出记录到data.txt</button>
+
+    <script>
+        // 读取本地存储聊天记录
+        let chatList = JSON.parse(localStorage.getItem("chatData")) || [];
+        const chatBox = document.getElementById("chatBox");
+        const nameInput = document.getElementById("name");
+        const msgInput = document.getElementById("inputMsg");
+
+        // 渲染所有消息
+        function renderChat(){
+            chatBox.innerHTML = "";
+            chatList.forEach(item=>{
+                const div = document.createElement("div");
+                div.className = item.name === nameInput.value ? "msg self" : "msg other";
+                div.innerHTML = `
+                    <span>${item.name}：${item.content}</span>
+                    <span class="time">${item.time}</span>
+                `;
+                chatBox.appendChild(div);
+            })
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        // 发送消息
+        function sendMsg(){
+            const name = nameInput.value.trim();
+            const content = msgInput.value.trim();
+            if(!name || !content) return alert("昵称和内容不能为空！");
+            const now = new Date().toLocaleString();
+            chatList.push({name,content,time:now});
+            // 存入本地存储
+            localStorage.setItem("chatData",JSON.stringify(chatList));
+            msgInput.value = "";
+            renderChat();
+        }
+
+        // 回车发送
+        msgInput.addEventListener("keydown",e=>{
+            if(e.key === "Enter") sendMsg();
+        })
+
+        // 导出data.txt文件
+        function exportTxt(){
+            let text = "===聊天室聊天记录===\n";
+            chatList.forEach(item=>{
+                text += `[${item.time}] ${item.name}: ${item.content}\n`;
+            })
+            const blob = new Blob([text],{type:"text/plain"});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "data.txt";
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // 页面加载渲染历史消息
+        renderChat();
+    </script>
+</body>
 </html>
