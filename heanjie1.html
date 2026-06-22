@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>何安杰生日快乐</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  width:100vw;
+  height:100vh;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  background: linear-gradient(-45deg, #ffd700, #ff6b6b, #ff4757, #ffa502);
+  background-size:400% 400%;
+  animation: bgMove 8s ease infinite;
+  font-family:"微软雅黑",sans-serif;
+}
+@keyframes bgMove{
+  0%{background-position:0% 50%}
+  50%{background-position:100% 50%}
+  100%{background-position:0% 50%}
+}
+.title{
+  font-size:60px;
+  font-weight:bold;
+  color:#fff;
+  text-shadow:0 0 15px #fff, 0 0 30px gold;
+  animation: shake 0.6s infinite alternate;
+  text-align:center;
+  padding:0 20px;
+}
+@keyframes shake{
+  from{transform:scale(1)}
+  to{transform:scale(1.08)}
+}
+.sub-text{
+  margin-top:20px;
+  font-size:24px;
+  color:#fff;
+  text-shadow:0 0 8px #333;
+}
+#firework{
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  pointer-events:none;
+}
+</style>
+</head>
+<body>
+<div id="firework"></div>
+<h1 class="title">🎉 祝何安杰生日快乐 🎉</h1>
+<p class="sub-text">工作顺利！</p >
+
+<script>
+const canvas = document.createElement("canvas");
+const ctx = canvas.getContext("2d");
+const fireBox = document.getElementById("firework");
+fireBox.appendChild(canvas);
+
+function resizeCanvas(){
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resizeCanvas();
+window.addEventListener("resize",resizeCanvas);
+
+// 礼花粒子类
+class Particle{
+  constructor(x,y,color){
+    this.x = x;
+    this.y = y;
+    this.color = color;
+    this.radius = Math.random()*3+1;
+    const angle = Math.random()*Math.PI*2;
+    const speed = Math.random()*6+2;
+    this.vx = Math.cos(angle)*speed;
+    this.vy = Math.sin(angle)*speed;
+    this.alpha = 1;
+    this.decay = Math.random()*0.015+0.008;
+  }
+  update(){
+    this.x += this.vx;
+    this.y += this.vy;
+    this.vy += 0.08;
+    this.alpha -= this.decay;
+  }
+  draw(){
+    ctx.save();
+    ctx.globalAlpha = this.alpha;
+    ctx.beginPath();
+    ctx.arc(this.x,this.y,this.radius,0,Math.PI*2);
+    ctx.fillStyle = this.color;
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+let particles = [];
+const colors = ["#ff0000","#ffdd00","#00ff66","#00ccff","#ff66ff","#ffffff"];
+
+// 发射礼花
+function createFirework(){
+  const x = Math.random()*canvas.width;
+  const y = Math.random()*canvas.height/2;
+  for(let i=0;i<80;i++){
+    const c = colors[Math.floor(Math.random()*colors.length)];
+    particles.push(new Particle(x,y,c));
+  }
+}
+
+// 动画循环
+function loop(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  for(let i=particles.length-1;i>=0;i--){
+    const p = particles[i];
+    p.update();
+    p.draw();
+    if(p.alpha <= 0) particles.splice(i,1);
+  }
+  requestAnimationFrame(loop);
+}
+loop();
+
+// 定时自动放烟花
+setInterval(createFirework,700);
+// 点击页面额外燃放烟花
+document.body.addEventListener("click",createFirework);
+</script>
+</body>
+</html>
