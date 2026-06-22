@@ -1,67 +1,131 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <title>服务端聊天室</title>
-    <style>
-        *{margin:0;padding:0;box-sizing:border-box;font-family:微软雅黑}
-        body{max-width:900px;margin:20px auto;padding:0 15px}
-        #chatBox{
-            width:100%;
-            height:500px;
-            border:1px solid #ccc;
-            padding:10px;
-            overflow-y:auto;
-            margin-bottom:15px;
-            background:#f9f9f9;
-        }
-        .msg{margin:6px 0;line-height:1.6}
-        #name{width:120px;padding:8px;border:1px solid #ddd}
-        #inputMsg{flex:1;padding:8px;border:1px solid #ddd;margin:0 8px}
-        .sendArea{display:flex;align-items:center}
-        button{padding:8px 16px;background:#007bff;color:white;border:none;cursor:pointer;border-radius:4px}
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>公共聊天室</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:system-ui,Microsoft YaHei}
+body{max-width:940px;margin:30px auto;padding:0 15px}
+#chatWrap{
+  width:100%;
+  height:550px;
+  border:1px solid #e5e7eb;
+  background:#f8fafc;
+  padding:12px;
+  overflow-y:auto;
+  border-radius:8px;
+  margin-bottom:16px;
+}
+.msg-item{margin:10px 0;line-height:1.65}
+.my-msg{text-align:right;color:#1677ff}
+.other-msg{text-align:left;color:#1f2937}
+.msg-time{font-size:12px;color:#9ca3af;margin-left:6px}
+.send-box{display:flex;gap:10px;align-items:center}
+#nick{width:130px;padding:10px;border:1px solid #ddd;border-radius:5px}
+#msg-input{flex:1;padding:10px;border:1px solid #ddd;border-radius:5px;outline:none}
+button{padding:10px 20px;border:none;border-radius:5px;cursor:pointer}
+#send-btn{background:#1677ff;color:#fff}
+#refresh-btn{background:#6b7280;color:#fff}
+.tip{margin-top:10px;color:#666;font-size:13px}
+</style>
 </head>
 <body>
-    <h2>XU聊天室</h2>
-    <div id="chatBox"></div>
-    <div class="sendArea">
-        <input type="text" id="name" placeholder="输入昵称" value="游客">
-        <input type="text" id="inputMsg" placeholder="输入内容回车发送">
-        <button onclick="send()">发送</button>
-    </div>
+<h2>公共在线聊天室</h2>
+<div id="chatWrap"></div>
+<div class="send-box">
+  <input id="nick" placeholder="输入昵称" value="游客">
+  <input id="msg-input" placeholder="输入消息，回车发送">
+  <button id="send-btn">发送</button>
+  <button id="refresh-btn">刷新记录</button>
+</div>
+<div class="tip">数据云端存储，所有访问该页面用户共享聊天记录（替代服务器data.txt）</div>
 
-    <script>
-        const chatBox = document.getElementById("chatBox");
-        // 获取消息列表
-        async function getMsg(){
-            let res = await fetch("/get");
-            let list = await res.json();
-            chatBox.innerHTML = "";
-            list.forEach(item=>{
-                let div = document.createElement("div");
-                div.className = "msg";
-                div.innerHTML = `[${item.time}] ${item.name}: ${item.content}`;
-                chatBox.appendChild(div);
-            })
-            chatBox.scrollTop = chatBox.scrollHeight;
-        }
-        // 发送消息提交后端写入data.txt
-        async function send(){
-            let name = document.getElementById("name").value.trim();
-            let content = document.getElementById("inputMsg").value.trim();
-            if(!name||!content) return;
-            await fetch("/send",{
-                method:"POST",
-                headers:{"Content-Type":"application/json"},
-                body:JSON.stringify({name,content})
-            })
-            document.getElementById("inputMsg").value = "";
-            getMsg();
-        }
-        document.getElementById("inputMsg").onkeydown=e=>e.key=="Enter"&&send();
-        setInterval(getMsg,1000);
-        getMsg();
-    </script>
+<script>
+// ============ 这里替换成你自己的 JSONBin 信息 ============
+const BIN_ID = "你的BIN_ID";
+const MASTER_KEY = "你的MasterKey";
+// ======================================================
+
+const chatWrap = document.getElementById("chatWrap");
+const nickInput = document.getElementById("nick");
+const msgInput = document.getElementById("msg-input");
+const sendBtn = document.getElementById("send-btn");
+const refreshBtn = document.getElementById("refresh-btn");
+
+// 渲染消息列表
+function renderList(list) {
+  chatWrap.innerHTML = "";
+  const myName = nickInput.value.trim();
+  list.forEach(item => {
+    const div = document.createElement("div");
+    div.className = myName === item.nick ? "msg-item my-msg" : "msg-item other-msg";
+    div.innerHTML = `
+      <span>${item.nick}：${item.content}</span>
+      <span class="msg-time">${item.time}</span>
+    `;
+    chatWrap.appendChild(div);
+  });
+  chatWrap.scrollTop = chatWrap.scrollHeight;
+}
+
+// 获取云端全部聊天记录
+async function getMsgList() {
+  try {
+    const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
+      headers: { "X-Master-Key": MASTER_KEY }
+    });
+    const data = await res.json();
+    const list = data.record || [];
+    renderList(list);
+    return list;
+  } catch (err) {
+    console.error("读取失败", err);
+    chatWrap.innerHTML = "<p style='color:red'>加载聊天记录失败，请检查密钥和BIN_ID</p >";
+    return [];
+  }
+}
+
+// 发送新消息，追加到云端（模拟写入data.txt）
+async function sendMessage() {
+  const nick = nickInput.value.trim();
+  const content = msgInput.value.trim();
+  if (!nick || !content) return alert("昵称和消息不能为空");
+
+  // 获取原有数据
+  const list = await getMsgList();
+  // 新增消息对象
+  const newMsg = {
+    nick,
+    content,
+    time: new Date().toLocaleString()
+  };
+  list.push(newMsg);
+
+  // 覆盖写入云端bin（相当于写入data.txt）
+  await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+    method: "PUT",
+    headers: {
+      "X-Master-Key": MASTER_KEY,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(list)
+  });
+
+  msgInput.value = "";
+  getMsgList();
+}
+
+// 绑定事件
+sendBtn.addEventListener("click", sendMessage);
+refreshBtn.addEventListener("click", getMsgList);
+msgInput.addEventListener("keydown", e => e.key === "Enter" && sendMessage());
+
+// 自动3秒刷新一次消息
+setInterval(getMsgList, 3000);
+
+// 页面加载初始化
+getMsgList();
+</script>
 </body>
 </html>
